@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>terminal bio</title>
+<style>
+  :root { --sz: 422px; }
+  @media (min-width: 1440px) { :root { --sz: 576px; } }
+  @media (max-width: 480px)  { :root { --sz: 322px; } }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #101010;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    transition: background 0.35s;
+  }
+
+  body.light { background: #FCFCFC; }
+
+  #wrap {
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  #terminal {
+    width: var(--sz); height: var(--sz);
+    background: #101010;
+    border-radius: 10px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    transition: background 0.35s, border-color 0.35s;
+  }
+
+  body.light #terminal {
+    background: #FCFCFC;
+    border-color: rgba(0,0,0,0.07);
+  }
+
+  #body {
+    flex: 1;
+    padding: 36px 32px 20px;
+    display: flex; flex-direction: column; justify-content: center;
+    overflow: hidden;
+  }
+
+  #output {
+    font-size: 10px;
+    line-height: 2.0;
+    color: #abb2bf;
+    width: 300px;
+    margin: 0 auto;
+    transition: color 0.35s;
+  }
+
+  body.light #output { color: #605850; }
+
+  .line { display: block; }
+
+  .p  { color: #4b5263; }
+  .v  { color: #61afef; }
+  .m  { color: #5c6370; }
+  .d  { color: #3e4451; }
+  .g  { color: #56b6c2; }
+  .mk { color: #f97316; }
+
+  body.light .p  { color: #a09080; }
+  body.light .v  { color: #1a5a9e; }
+  body.light .m  { color: #706878; }
+  body.light .d  { color: #a09080; }
+  body.light .g  { color: #1e7a58; }
+  body.light .mk { color: #c24d08; }
+
+  .cursor {
+    display: inline-block;
+    width: 5px; height: 12px;
+    background: #f97316;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+    animation: blink 1.0s step-end infinite;
+  }
+
+  body.light .cursor { background: #c24d08; }
+
+  @keyframes blink {
+    0%, 49%  { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
+  /* Bottom controls */
+  #bottom {
+    display: flex; flex-direction: column; align-items: center;
+    padding-bottom: 18px; gap: 7px;
+  }
+
+  #controls-row {
+    display: flex; align-items: center; gap: 18px;
+  }
+
+  .paddle {
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.18);
+    padding: 4px 8px;
+    border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.15s;
+    user-select: none;
+  }
+
+  .paddle:hover  { color: rgba(255,255,255,0.42); }
+  .paddle:active { color: rgba(255,255,255,0.72); }
+
+  body.light .paddle         { color: rgba(0,0,0,0.20); }
+  body.light .paddle:hover   { color: rgba(0,0,0,0.48); }
+  body.light .paddle:active  { color: rgba(0,0,0,0.72); }
+
+  .toggle {
+    position: relative; display: inline-block;
+    width: 26px; height: 14px; cursor: pointer;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .knob {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.08);
+    border-radius: 7px; transition: background 0.2s;
+  }
+  .knob::before {
+    content: ''; position: absolute;
+    width: 10px; height: 10px; left: 2px; top: 2px;
+    background: rgba(255,255,255,0.22); border-radius: 50%;
+    transition: transform 0.18s, background 0.18s;
+  }
+  .toggle input:checked + .knob { background: rgba(255,255,255,0.18); }
+  .toggle input:checked + .knob::before { transform: translateX(12px); background: rgba(255,255,255,0.7); }
+
+  body.light .knob { background: rgba(0,0,0,0.10); }
+  body.light .knob::before { background: rgba(0,0,0,0.26); }
+  body.light .toggle input:checked + .knob { background: rgba(0,0,0,0.16); }
+  body.light .toggle input:checked + .knob::before { background: rgba(0,0,0,0.68); }
+
+  #meta {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.18);
+    font-family: 'Geist Mono', 'Menlo', monospace;
+    transition: color 0.35s;
+  }
+
+  body.light #meta { color: rgba(0,0,0,0.22); }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div id="terminal">
+    <div id="body">
+      <div id="output"></div>
+    </div>
+    <div id="bottom">
+      <div id="controls-row">
+        <button class="paddle" id="btn-prev">
+          <svg width="9" height="14" viewBox="0 0 9 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6.5,1.5 2.5,7 6.5,12.5"/>
+          </svg>
+        </button>
+        <label class="toggle"><input type="checkbox" id="mode-switch"><span class="knob"></span></label>
+        <button class="paddle" id="btn-next">
+          <svg width="9" height="14" viewBox="0 0 9 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="2.5,1.5 6.5,7 2.5,12.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const out  = document.getElementById('output');
+  let   actx = null;
+
+  const ac = () => {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    return actx;
+  };
+
+  function mkNoise(c, dur) {
+    const n = Math.ceil(c.sampleRate * dur);
+    const buf = c.createBuffer(1, n, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf; return src;
+  }
+
+  function keyClick() {
+    try {
+      const c = ac(), t = c.currentTime;
+      const noise = mkNoise(c, 0.005);
+      const ng = c.createGain();
+      ng.gain.setValueAtTime(0.14, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.006);
+      noise.connect(ng); ng.connect(c.destination);
+      noise.start(); noise.stop(t + 0.007);
+      const osc = c.createOscillator(), og = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300 + Math.random() * 60, t);
+      osc.frequency.exponentialRampToValueAtTime(80, t + 0.04);
+      osc.connect(og); og.connect(c.destination);
+      og.gain.setValueAtTime(0.055, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+      osc.start(); osc.stop(t + 0.05);
+    } catch (_) {}
+  }
+
+  function enterClick() {
+    try {
+      const c = ac(), t = c.currentTime;
+      const noise = mkNoise(c, 0.008);
+      const ng = c.createGain();
+      ng.gain.setValueAtTime(0.22, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.01);
+      noise.connect(ng); ng.connect(c.destination);
+      noise.start(); noise.stop(t + 0.012);
+      const osc = c.createOscillator(), og = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, t);
+      osc.frequency.exponentialRampToValueAtTime(60, t + 0.055);
+      osc.connect(og); og.connect(c.destination);
+      og.gain.setValueAtTime(0.08, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      osc.start(); osc.stop(t + 0.065);
+    } catch (_) {}
+  }
+
+  function blip() {
+    try {
+      const c = ac(), t = c.currentTime;
+      const noise = mkNoise(c, 0.004);
+      const ng = c.createGain();
+      ng.gain.setValueAtTime(0.05, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.005);
+      noise.connect(ng); ng.connect(c.destination);
+      noise.start(); noise.stop(t + 0.006);
+    } catch (_) {}
+  }
+
+  function successChime() {
+    try {
+      const c = ac();
+      [[880, 0, 0.12, 0.15], [1108, 0.18, 0.10, 0.18]].forEach(([hz, delay, vol, decay]) => {
+        const osc = c.createOscillator(), g = c.createGain();
+        osc.type = 'sine'; osc.frequency.value = hz;
+        osc.connect(g); g.connect(c.destination);
+        const t = c.currentTime + delay;
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+        osc.start(t); osc.stop(t + decay + 0.01);
+      });
+    } catch (_) {}
+  }
+
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  function waitG(ms, gen) {
+    return new Promise((res, rej) => setTimeout(() => runGen === gen ? res() : rej(0), ms));
+  }
+
+  function addLine(html = '') {
+    const el = document.createElement('span');
+    el.className = 'line'; el.innerHTML = html;
+    out.appendChild(el);
+    return el;
+  }
+
+  function mkPrompt(user = 'matt') {
+    const el  = document.createElement('span'); el.className = 'line';
+    const pr  = document.createElement('span'); pr.className = 'p'; pr.textContent = user + ' › ';
+    const cmd = document.createElement('span');
+    const cur = document.createElement('span'); cur.className = 'cursor';
+    el.appendChild(pr); el.appendChild(cmd); el.appendChild(cur);
+    out.appendChild(el);
+    return { cmd, cur };
+  }
+
+  async function type(cmdEl, text, gen) {
+    for (const ch of text) {
+      if (runGen !== gen) throw 0;
+      cmdEl.textContent += ch;
+      keyClick();
+      await wait(46 + Math.random() * 62);
+    }
+  }
+
+  const SPIN = ['⣾','⣽','⣻','⢿','⡿','⣟','⣯','⣷'];
+
+  function thinkFor(messages, ms, gen) {
+    const line = addLine('');
+    const span = document.createElement('span'); line.appendChild(span);
+    let si = 0, mi = 0, frames = 0;
+    span.innerHTML = `<span class="v">${SPIN[si]}</span>  <span class="d">${messages[mi]}</span>`;
+    return new Promise((res, rej) => {
+      const iv = setInterval(() => {
+        if (runGen !== gen) { clearInterval(iv); line.remove(); rej(0); return; }
+        si = (si + 1) % SPIN.length;
+        if (++frames % 12 === 0) mi = (mi + 1) % messages.length;
+        span.innerHTML = `<span class="v">${SPIN[si]}</span>  <span class="d">${messages[mi]}</span>`;
+      }, 100);
+      setTimeout(() => {
+        clearInterval(iv);
+        line.remove();
+        runGen === gen ? res() : rej(0);
+      }, ms);
+    });
+  }
+
+  function spinFor(label, ms, gen) {
+    const line = addLine('');
+    const span = document.createElement('span'); line.appendChild(span);
+    let si = 0;
+    span.innerHTML = `<span class="v">${SPIN[si]}</span> ${label}`;
+    return new Promise((res, rej) => {
+      const iv = setInterval(() => {
+        if (runGen !== gen) { clearInterval(iv); rej(0); return; }
+        si = (si + 1) % SPIN.length;
+        span.innerHTML = `<span class="v">${SPIN[si]}</span> ${label}`;
+      }, 100);
+      setTimeout(() => {
+        clearInterval(iv);
+        runGen === gen ? res(line) : rej(0);
+      }, ms);
+    });
+  }
+
+  // ── Scenes ────────────────────────────────────────────────────────
+
+  async function sceneAbout(gen) {
+    const { cmd, cur } = mkPrompt('matt');
+    await waitG(700, gen);
+    await type(cmd, 'about me', gen);
+    enterClick(); await waitG(140, gen); cur.remove();
+
+    await thinkFor(['loading profile', 'resolving identity'], 2200, gen);
+
+    addLine('<span class="mk">—</span> <span class="m">name</span>      <span class="v">Matt Silverman</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="m">born</span>      <span class="v">San Francisco, CA</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="m">raised</span>    <span class="v">San Diego, CA</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="m">based</span>     <span class="v">San Diego, CA</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="m">role</span>      <span class="v">product designer</span>  <span class="d">· 11 years</span>');
+    blip(); await waitG(340, gen);
+
+    addLine('');
+    addLine('<span class="d">experience</span>');
+    blip(); await waitG(180, gen);
+    addLine('<span class="mk">—</span> <span class="v">Qualcomm</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">The Action Network</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Olympus Finance</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">MakersPlace</span>');
+    blip();
+  }
+
+  async function sceneProInterests(gen) {
+    const { cmd, cur } = mkPrompt('matt');
+    await waitG(700, gen);
+    await type(cmd, 'interests --pro', gen);
+    enterClick(); await waitG(140, gen); cur.remove();
+
+    await thinkFor(['reading file', 'indexing skills'], 1800, gen);
+
+    addLine('<span class="d">professional interests</span>');
+    blip(); await waitG(180, gen);
+    addLine('<span class="mk">—</span> <span class="v">human-computer interaction</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">applied AI</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">systems</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Japanese + Swiss graphic design</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">creative coding</span>');
+    blip();
+  }
+
+  async function scenePersonalInterests(gen) {
+    const { cmd, cur } = mkPrompt('matt');
+    await waitG(700, gen);
+    await type(cmd, 'interests --personal', gen);
+    enterClick(); await waitG(140, gen); cur.remove();
+
+    await thinkFor(['reading file', 'parsing entries'], 1800, gen);
+
+    addLine('<span class="d">personal interests</span>');
+    blip(); await waitG(180, gen);
+    addLine('<span class="mk">—</span> <span class="v">family + friends</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">museums</span>  <span class="d">· fine art · architecture</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">cars</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">horology</span>  <span class="d">· Swiss watchmaking</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">U.S. history</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">backpack camping</span>  <span class="d">+ fishing</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">traveling the world</span>');
+    blip();
+  }
+
+  async function sceneSports(gen) {
+    const { cmd, cur } = mkPrompt('matt');
+    await waitG(700, gen);
+    await type(cmd, 'sports --teams', gen);
+    enterClick(); await waitG(140, gen); cur.remove();
+
+    await thinkFor([
+      'loading rosters',
+      'checking standings',
+      'pulling prospects',
+    ], 2600, gen);
+
+    addLine('<span class="mk">—</span> <span class="v">San Francisco Giants</span>     <span class="d">MLB</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">San Francisco 49ers</span>      <span class="d">NFL</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Golden State Warriors</span>    <span class="d">NBA</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">San Jose Sharks</span>          <span class="d">NHL</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">San Diego FC</span>             <span class="d">MLS</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Univ. of Maine Hockey</span>    <span class="d">Hockey East</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Boston University</span>        <span class="d">Hockey East</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Stanford Golf + Baseball</span> <span class="d">NCAA</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Florida Basketball + Football</span>  <span class="d">NCAA</span>');
+    blip(); await waitG(320, gen);
+    addLine('<span class="d">also: prospects — hockey + golf scouting</span>');
+    blip();
+  }
+
+  async function sceneHealthFood(gen) {
+    const { cmd, cur } = mkPrompt('matt');
+    await waitG(700, gen);
+    await type(cmd, 'health --habits', gen);
+    enterClick(); await waitG(140, gen); cur.remove();
+
+    await thinkFor(['reading habits', 'checking routine'], 1800, gen);
+
+    addLine('<span class="d">fitness</span>');
+    blip(); await waitG(180, gen);
+    addLine('<span class="mk">—</span> <span class="v">gym</span>  <span class="d">· lifting + strength</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">running</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">yoga</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">whole foods</span>  <span class="d">· no seed oils · water</span>');
+    blip(); await waitG(340, gen);
+
+    addLine('');
+    addLine('<span class="d">cheat meals</span>');
+    blip(); await waitG(180, gen);
+    addLine('<span class="mk">—</span> <span class="v">cheeseburgers</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">california burritos</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">sushi</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">pizza</span>');
+    blip(); await waitG(200, gen);
+    addLine('<span class="mk">—</span> <span class="v">Mexican Coca-Cola</span>');
+    blip();
+  }
+
+  // ── Scene registry ────────────────────────────────────────────────
+
+  const SCENE_NAMES = ['about', 'pro interests', 'personal', 'sports', 'health + food'];
+  const SCENE_FNS   = [sceneAbout, sceneProInterests, scenePersonalInterests, sceneSports, sceneHealthFood];
+
+  let sceneIdx = 0;
+  let runGen   = 0;
+
+  function switchScene(idx) {
+    sceneIdx = ((idx % SCENE_FNS.length) + SCENE_FNS.length) % SCENE_FNS.length;
+    runGen++;
+    out.innerHTML = '';
+    setTimeout(() => run(), 400);
+  }
+
+  async function run() {
+    const gen = ++runGen;
+    out.innerHTML = '';
+    try {
+      await waitG(700, gen);
+      await SCENE_FNS[sceneIdx](gen);
+      await waitG(500, gen);
+      mkPrompt('matt');
+      await waitG(3200, gen);
+      sceneIdx = (sceneIdx + 1) % SCENE_FNS.length;
+      run();
+    } catch (_) {}
+  }
+
+  document.getElementById('btn-prev').addEventListener('click', () => switchScene(sceneIdx - 1));
+  document.getElementById('btn-next').addEventListener('click', () => switchScene(sceneIdx + 1));
+
+  const modeSwitch = document.getElementById('mode-switch');
+
+  const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  if (prefersLight) {
+    document.body.classList.add('light');
+    modeSwitch.checked = true;
+  }
+
+  modeSwitch.addEventListener('change', e => {
+    document.body.classList.toggle('light', e.target.checked);
+  });
+
+  document.addEventListener('click', () => ac(), { once: true });
+
+  run();
+})();
+</script>
+</body>
+</html>
