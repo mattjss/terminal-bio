@@ -519,7 +519,7 @@
       await SCENE_FNS[sceneIdx](gen);
       await waitG(500, gen);
       mkPrompt('matt');
-      await waitG(5000, gen);
+      await waitG(5000 + Math.random() * 1000, gen);
       sceneIdx = (sceneIdx + 1) % SCENE_FNS.length;
       run();
     } catch (_) {}
